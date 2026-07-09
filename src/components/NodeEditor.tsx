@@ -99,6 +99,9 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
       if (propsRef.current.handleStyle) {
         config.handleStyle = propsRef.current.handleStyle;
       }
+      if (propsRef.current.assetsPath) {
+        config.assetsPath = propsRef.current.assetsPath;
+      }
 
       CoreNodeEditor.create(
         "webgl-canvas",

@@ -85,6 +85,8 @@ export interface NodeEditorProps {
   connectionMode?: ConnectionMode;
   /** Custom handle appearance. */
   handleStyle?: NodeEditorConfig['handleStyle'];
+  /** Base path for fetching core assets (atlases). Defaults to 'assets'. */
+  assetsPath?: string;
   /** Texture skins to register on initialisation. */
   textureSkins?: AddUploadedTextureParams[];
   /** Enable verbose event logging to the console. */
