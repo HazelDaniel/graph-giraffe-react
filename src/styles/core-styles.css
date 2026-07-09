@@ -1,0 +1,151 @@
+/**
+ * Core layout styles required by @graph-giraffe/core.
+ *
+ * These are scoped to the `.gg-editor-root` container so they do not
+ * bleed into the host application's global styles.
+ */
+
+/* ─── CSS Custom Properties (design tokens) ─────────────── */
+.gg-editor-root {
+  --bg-dark: #0f172a;
+  --glass-bg: rgba(22, 22, 22, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+
+  --bg-primary: #08090f;
+  --bg-secondary: #0e111a;
+  --bg-hover: #232d45;
+  --material-surface: rgba(255, 255, 255, 0.19);
+
+  --border-subtle: rgba(148, 163, 184, 0.08);
+  --border-default: rgba(148, 163, 184, 0.14);
+  --border-focus: rgba(99, 102, 241, 0.5);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-accent: #6366f1;
+  --text-cyan: #06b6d4;
+
+  --accent-cyan: #06b6d4;
+  --accent-indigo: #6366f1;
+  --accent-purple: #a855f7;
+  --accent-blue-glow: rgba(6, 182, 212, 0.25);
+
+  --panel-width: 380px;
+  --header-height: 56px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  position: relative;
+  overflow: hidden;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+}
+
+/* ─── Canvases ──────────────────────────────────────────── */
+.gg-editor-root canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+/* ─── Web-component part forwarding ─────────────────────── */
+.gg-editor-root gg-ui-controls::part(root),
+.gg-editor-root gg-action-pane::part(root) {
+  --bg-dark: inherit;
+  --glass-bg: inherit;
+  --glass-border: inherit;
+  --accent: inherit;
+  --accent-hover: inherit;
+  --text-main: inherit;
+  --text-muted: inherit;
+  --bg-primary: inherit;
+  --bg-secondary: inherit;
+  --bg-hover: inherit;
+  --material-surface: inherit;
+  --border-subtle: inherit;
+  --border-default: inherit;
+  --border-focus: inherit;
+  --text-primary: inherit;
+  --text-secondary: inherit;
+  --text-tertiary: inherit;
+  --text-accent: inherit;
+  --text-cyan: inherit;
+  --accent-cyan: inherit;
+  --accent-indigo: inherit;
+  --accent-purple: inherit;
+  --accent-blue-glow: inherit;
+}
+
+/* ─── Utility classes expected by the Shell template ────── */
+.gg-editor-root .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.gg-editor-root .hidden {
+  display: none !important;
+}
+
+.gg-editor-root .controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gg-editor-root .settings-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.gg-editor-root .settings-group.vertical {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.gg-editor-root .settings-group label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.gg-editor-root .text-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.gg-editor-root .text-input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.1);
+}
