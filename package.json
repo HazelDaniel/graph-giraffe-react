@@ -19,7 +19,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@graph-giraffe/core": "^0.2.3"
+    "@graph-giraffe/core": "^0.2.7"
   },
   "peerDependencies": {
     "react": "^18 || ^19",
