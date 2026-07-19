@@ -4,6 +4,7 @@ import { useGraphEvent } from './hooks/useGraphEvent';
 import type { NodeEditorHandle } from './types';
 
 import './App.css';
+import '@graph-giraffe/core/assets/index.css';
 
 /** Child component that uses the hooks inside NodeEditor context. */
 function EventLogger() {

@@ -1,6 +1,6 @@
 {
   "name": "@graph-giraffe/react",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "A React Wrapper For @graph-giraffe/core",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -10,7 +10,8 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+		"./assets/*": "./assets/*"
   },
   "scripts": {
     "dev": "vite",

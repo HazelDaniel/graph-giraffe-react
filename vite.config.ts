@@ -9,11 +9,11 @@ function copyCoreAssets() {
   return {
     name: "copy-core-assets",
     closeBundle() {
-      mkdirSync(resolve(__dirname, "dist/assets"), { recursive: true });
+      mkdirSync(resolve(__dirname, "assets"), { recursive: true });
 
       cpSync(
         resolve(__dirname, "node_modules/@graph-giraffe/core/assets/index.css"),
-        resolve(__dirname, "dist/assets/index.css")
+        resolve(__dirname, "assets/index.css")
       );
     },
   };

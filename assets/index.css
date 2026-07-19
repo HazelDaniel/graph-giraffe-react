@@ -1,0 +1,224 @@
+@font-face {
+  font-family: Geist;
+  src: url("/fonts/Geist-Medium.ttf");
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: Geist;
+  src: url("/fonts/Geist-SemiBold.ttf");
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: Geist;
+  src: url("/fonts/Geist-Bold.ttf");
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: Geist;
+  src: url("/fonts/Geist-Light.ttf");
+  font-weight: 400;
+}
+
+:root {
+  --bg-dark: #0f172a;
+  --glass-bg: rgba(22, 22, 22, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+
+  --bg-primary: #08090f;
+  --bg-secondary: #0e111a;
+  --bg-hover: #232d45;
+  --material-surface: rgba(255, 255, 255, 0.19);
+
+  /* Borders */
+  --border-subtle: rgba(148, 163, 184, 0.08);
+  --border-default: rgba(148, 163, 184, 0.14);
+  --border-focus: rgba(99, 102, 241, 0.5);
+
+  /* Typography */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-accent: #6366f1; /* Indigo */
+  --text-cyan: #06b6d4; /* Cyan */
+
+  /* Accents */
+  --accent-cyan: #06b6d4;
+  --accent-indigo: #6366f1;
+  --accent-purple: #a855f7;
+  --accent-blue-glow: rgba(6, 182, 212, 0.25);
+
+  /* Layout */
+  --panel-width: 380px;
+  --header-height: 56px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-geist: "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+}
+
+gg-ui-controls::part(root) {
+  --bg-dark: inherit;
+  --glass-bg: inherit;
+  --glass-border: inherit;
+  --accent: inherit;
+  --accent-hover: inherit;
+  --text-main: inherit;
+  --text-muted: inherit;
+
+  --bg-primary: inherit;
+  --bg-secondary: inherit;
+  --bg-hover: inherit;
+
+  --material-surface: inherit;
+
+  /* Borders */
+  --border-subtle: inherit;
+  --border-default: inherit;
+  --border-focus: inherit;
+
+  /* Typography */
+  --text-primary: inherit;
+  --text-secondary: inherit;
+  --text-tertiary: inherit;
+  --text-accent: inherit;
+  --text-cyan: inherit;
+
+  /* Accents */
+  --accent-cyan: inherit;
+  --accent-indigo: inherit;
+  --accent-purple: inherit;
+  --accent-blue-glow: inherit;
+}
+
+gg-action-pane::part(root) {
+  --bg-dark: inherit;
+  --glass-bg: inherit;
+  --glass-border: inherit;
+  --accent: inherit;
+  --accent-hover: inherit;
+  --text-main: inherit;
+  --text-muted: inherit;
+
+  --bg-primary: inherit;
+  --bg-secondary: inherit;
+  --bg-hover: inherit;
+
+  --material-surface: inherit;
+
+  /* Borders */
+  --border-subtle: inherit;
+  --border-default: inherit;
+  --border-focus: inherit;
+
+  /* Typography */
+  --text-primary: inherit;
+  --text-secondary: inherit;
+  --text-tertiary: inherit;
+  --text-accent: inherit;
+  --text-cyan: inherit;
+
+  /* Accents */
+  --accent-cyan: inherit;
+  --accent-indigo: inherit;
+  --accent-purple: inherit;
+  --accent-blue-glow: inherit;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Geist", -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  /* background-color: var(--bg-dark); */
+  color: var(--text-main);
+  height: 100vh;
+  overflow-x: hidden;
+}
+
+canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  overscroll-behavior: none;
+  /* issue: cursor not aligned with default cursor */
+  /*cursor: url("data:image/svg+xml,%3Csvg width='31' height='33' viewBox='0 0 31 33' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg filter='url(%23filter0_d_324_726)'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.18 13.1689L5 4L9.77288 25.6453L15.605 17.0961L25.18 13.1689Z' fill='%23363B3E'/%3E%3Cpath d='M25.3697 13.6315L26.4404 13.1924L25.3868 12.7137L5.20683 3.54478L4.2964 3.13112L4.51173 4.10767L9.28461 25.753L9.53379 26.8831L10.1859 25.9271L15.9335 17.5017L25.3697 13.6315Z' stroke='white' stroke-opacity='0.8'/%3E%3C/g%3E%3Cdefs%3E%3Cfilter id='filter0_d_324_726' x='0.592796' y='0.262207' width='30.108' height='31.8586' filterUnits='userSpaceOnUse' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-opacity='0' result='BackgroundImageFix'/%3E%3CfeColorMatrix in='SourceAlpha' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0' result='hardAlpha'/%3E%3CfeOffset dy='1'/%3E%3CfeGaussianBlur stdDeviation='1.5'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0'/%3E%3CfeBlend mode='normal' in2='BackgroundImageFix' result='effect1_dropShadow_324_726'/%3E%3CfeBlend mode='normal' in='SourceGraphic' in2='effect1_dropShadow_324_726' result='shape'/%3E%3C/filter%3E%3C/defs%3E%3C/svg%3E%0A"), auto;*/
+
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.settings-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.settings-group.vertical {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.settings-group label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.text-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text-main);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.text-input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.1);
+}
