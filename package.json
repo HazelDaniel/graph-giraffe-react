@@ -20,7 +20,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@graph-giraffe/core": "latest"
+    "@graph-giraffe/core": "^0.4.1"
   },
   "peerDependencies": {
     "react": "^18 || ^19",
