@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@graph-giraffe/core':
-        specifier: ^0.2.7
-        version: 0.2.7
+        specifier: latest
+        version: 0.4.0
     devDependencies:
       '@babel/core':
         specifier: ^7.29.7
@@ -133,8 +133,8 @@ packages:
   '@emnapi/wasi-threads@1.2.2':
     resolution: {integrity: sha512-c95qOXkHdydNKhscBTebqEC1CVAZpyqOfVfBzQ1qgzyl3gfeldUjIggDbIZgDKsHLgnsM+igH7TJ/eAasaVuMA==}
 
-  '@graph-giraffe/core@0.2.7':
-    resolution: {integrity: sha512-RoKwApEpKv25GbUQNKGwyCxWp8rAG8fbfMRYaRgguvMX20yJsGWNH+5dZo35TPnKMnM225fI5wTv/XD49mcoPQ==}
+  '@graph-giraffe/core@0.4.0':
+    resolution: {integrity: sha512-vHYJiTSIZgIiBF7KJVs+sj/Ybg1gG9FG5+UQ6bnz9TZUwjWEYYSolPsiH4C2DY3x043PyueA244/TJ43hYtPFw==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -941,7 +941,7 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@graph-giraffe/core@0.2.7': {}
+  '@graph-giraffe/core@0.4.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
