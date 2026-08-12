@@ -11,19 +11,31 @@ import {
   NodeEditor as CoreNodeEditor,
   Shell,
   shaders,
+  DOM_NODE_DESCRIPTORS,
+  registerDomNodeDescriptors,
 } from "@graph-giraffe/core";
 
+import { createRoot } from "react-dom/client";
 
 import type {
   NodeEditorConfig,
+  NodeTypeRegistry,
+  DomNodeRenderer,
   GraphEvents,
   GraphBeforeEvents,
   SyncHandler,
   AsyncHandler,
 } from "@graph-giraffe/core";
 
+import type { Root } from "react-dom/client";
+
 import { NodeEditorContext } from "../context/NodeEditorContext";
-import type { NodeEditorProps, NodeEditorHandle } from "../types";
+import type {
+  NodeEditorProps,
+  NodeEditorHandle,
+  NodeSkinComponent,
+  BuiltinNodeType,
+} from "../types";
 
 import "../styles/core-styles.css";
 
@@ -51,6 +63,89 @@ const BEFORE_EVENT_MAP: Array<
   ["onBeforeNodeDelete", "before:nodeDelete"],
   ["onBeforeNodeReparent", "before:nodeReparent"],
 ];
+
+// Convenience prop name per built-in node type, so `groupSkin={<MyGroup/>}`
+// works alongside the generic `skins={{ group: MyGroup }}` record.
+const BUILTIN_SKIN_PROPS: Array<[BuiltinNodeType, keyof NodeEditorProps]> = [
+  ["node", "nodeSkin"],
+  ["hub", "hubSkin"],
+  ["branch", "branchSkin"],
+  ["group", "groupSkin"],
+  ["composition", "compositionSkin"],
+  ["composition-child", "compositionChildSkin"],
+  ["subgraph", "subgraphSkin"],
+];
+
+function resolveSkin(
+  type: string,
+  props: NodeEditorProps
+): NodeSkinComponent | undefined {
+  const viaRecord = props.skins?.[type as BuiltinNodeType];
+  if (viaRecord) return viaRecord;
+  for (const [builtin, propKey] of BUILTIN_SKIN_PROPS) {
+    if (type === builtin) {
+      return (props as Record<string, unknown>)[propKey] as
+        | NodeSkinComponent
+        | undefined;
+    }
+  }
+  return undefined;
+}
+
+function hasSkins(props: NodeEditorProps): boolean {
+  return (
+    (props.skins && Object.keys(props.skins).length > 0) ||
+    BUILTIN_SKIN_PROPS.some(([, propKey]) => props[propKey] != null)
+  );
+}
+
+/**
+ * Bridge a declarative React skin component to core's `DomNodeRenderer`. Each
+ * view mounts a React root hosting the component; state changes flow through
+ * `updateView` re-renders and teardown unmounts the root.
+ */
+function createReactDomRenderer(
+  Component: NodeSkinComponent
+): DomNodeRenderer {
+  return {
+    createView(ctx) {
+      const element = document.createElement("div");
+      const root = createRoot(element);
+      root.render(<Component {...ctx} />);
+      (element as unknown as { __ggDomRoot?: Root }).__ggDomRoot = root;
+      return element;
+    },
+    updateView(ctx) {
+      const host = ctx.element as unknown as { __ggDomRoot?: Root };
+      host.__ggDomRoot?.render(<Component {...ctx} />);
+    },
+    destroyView(ctx) {
+      const host = ctx.element as unknown as { __ggDomRoot?: Root };
+      host.__ggDomRoot?.unmount();
+      (host as unknown as { __ggDomRoot?: Root }).__ggDomRoot = undefined;
+    },
+  };
+}
+
+/**
+ * Replace every built-in descriptor with its DOM skin on the editor's registry.
+ * Types without a consumer skin fall back to the bundled DOM skins shipped in
+ * core, so `renderMode: "dom"` works with zero configuration.
+ */
+function applySkins(registry: NodeTypeRegistry, props: NodeEditorProps): void {
+  if (!hasSkins(props)) {
+    registerDomNodeDescriptors(registry);
+    return;
+  }
+  for (const descriptor of DOM_NODE_DESCRIPTORS) {
+    const Skin = resolveSkin(descriptor.type, props);
+    registry.replace(
+      Skin
+        ? { ...descriptor, domRenderer: createReactDomRenderer(Skin) }
+        : descriptor
+    );
+  }
+}
 
 /**
  * React wrapper around `@graph-giraffe/core`.
@@ -102,6 +197,9 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
       if (propsRef.current.assetsPath) {
         config.assetsPath = propsRef.current.assetsPath;
       }
+      if (propsRef.current.renderMode) {
+        config.renderMode = propsRef.current.renderMode;
+      }
 
       CoreNodeEditor.create(
         "webgl-canvas",
@@ -118,6 +216,16 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
         propsRef.current.textureSkins ?? []
       ).then((instance) => {
         if (cancelled) return;
+
+        if (propsRef.current.renderMode === "dom") {
+          // Replace built-ins with their DOM skins (bundled, or React-component
+          // skins from props). Single call covers the no-skin default too.
+          applySkins(instance.typeRegistry, propsRef.current);
+        } else if (hasSkins(propsRef.current)) {
+          throw new Error(
+            '@graph-giraffe/react: skin props require `renderMode="dom"`.'
+          );
+        }
 
         if (propsRef.current.debug != null) {
           instance.debug = propsRef.current.debug;

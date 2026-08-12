@@ -39,6 +39,10 @@ export type {
   GraphBeforeEvents,
   SyncHandler,
   AsyncHandler,
+  NodeTypeDescriptor,
+  NodeTypeRegistry,
+  DomNodeRenderer,
+  DomNodeViewContext,
 } from '@graph-giraffe/core';
 
 export {
@@ -56,11 +60,17 @@ export {
   generateTetureSkinOption,
   getDefaultTextureIds,
   getCompositionReferenceTextureIds,
+  registerDomViews,
+  DOM_VIEW_TAGS,
+  createCustomElementDomRenderer,
+  toDomDescriptor,
+  DOM_NODE_DESCRIPTORS,
+  registerDomNodeDescriptors,
 } from '@graph-giraffe/core';
 
 // ─── Wrapper-specific types ─────────────────────────────
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { ComponentType, CSSProperties, ReactNode } from 'react';
 import type {
   NodeEditor,
   NodeData,
@@ -70,11 +80,34 @@ import type {
   HandleSide,
   NodeEditorConfig,
   AddUploadedTextureParams,
+  DomNodeViewContext,
   GraphEvents,
   GraphBeforeEvents,
   SyncHandler,
   AsyncHandler,
 } from '@graph-giraffe/core';
+
+/**
+ * Built-in node type names. Skins may be provided for any of these (or any
+ * custom type via the generic `skins` record).
+ */
+export type BuiltinNodeType =
+  | 'node'
+  | 'hub'
+  | 'branch'
+  | 'group'
+  | 'composition'
+  | 'composition-child'
+  | 'subgraph';
+
+/**
+ * Props passed to a DOM skin component. Mirrors the core `DomNodeViewContext`
+ * exactly, so a skin receives the node's live state on every update.
+ */
+export type NodeSkinProps = DomNodeViewContext;
+
+/** A declarative DOM skin for a node type. */
+export type NodeSkinComponent = ComponentType<NodeSkinProps>;
 
 /**
  * Props accepted by the `<NodeEditor>` component.
@@ -91,6 +124,36 @@ export interface NodeEditorProps {
   textureSkins?: AddUploadedTextureParams[];
   /** Enable verbose event logging to the console. */
   debug?: boolean;
+
+  /**
+   * Rendering pipeline for node bodies: `"webgl"` (default, GPU) or `"dom"`
+   * (custom-element / React skins). In `"dom"` mode the wrapper replaces every
+   * built-in type with its DOM descriptor — either the bundled DOM skins or a
+   * React component provided via the skin props. WebGL picking, handles and
+   * hit-testing remain authoritative in both modes.
+   */
+  renderMode?: 'webgl' | 'dom';
+
+  // ── Declarative DOM skins (require `renderMode: "dom"`) ──
+  /**
+   * Generic skin map keyed by node type (built-ins and custom types alike).
+   * Overrides the per-type convenience props below when both are set.
+   */
+  skins?: Partial<Record<BuiltinNodeType | string, NodeSkinComponent>>;
+  /** DOM skin for the `node` primitive. */
+  nodeSkin?: NodeSkinComponent;
+  /** DOM skin for the `hub` primitive. */
+  hubSkin?: NodeSkinComponent;
+  /** DOM skin for the `branch` primitive. */
+  branchSkin?: NodeSkinComponent;
+  /** DOM skin for the `group` container. */
+  groupSkin?: NodeSkinComponent;
+  /** DOM skin for the `composition` container. */
+  compositionSkin?: NodeSkinComponent;
+  /** DOM skin for the `composition-child` primitive. */
+  compositionChildSkin?: NodeSkinComponent;
+  /** DOM skin for the `subgraph` container. */
+  subgraphSkin?: NodeSkinComponent;
 
   // ── Sync event callbacks ───────────────────────────────
   onConnect?: SyncHandler<GraphEvents['connect']>;

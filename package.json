@@ -1,6 +1,6 @@
 {
   "name": "@graph-giraffe/react",
-  "version": "0.2.5",
+  "version": "0.9.0",
   "description": "A React Wrapper For @graph-giraffe/core",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -20,7 +20,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@graph-giraffe/core": "latest"
+    "@graph-giraffe/core": "^0.8.0"
   },
   "peerDependencies": {
     "react": "^18 || ^19",
