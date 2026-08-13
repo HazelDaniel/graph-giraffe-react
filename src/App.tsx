@@ -43,8 +43,9 @@ function App() {
         debug
         onConnect={handleConnect}
         style={{ width: '100vw', height: '100vh' }}
+        renderMode='dom'
       >
-        <EventLogger />
+        {/* <EventLogger /> */}
       </NodeEditor>
     </div>
   );
