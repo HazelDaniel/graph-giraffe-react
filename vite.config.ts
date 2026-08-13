@@ -48,6 +48,7 @@ export default defineConfig({
       external: [
         "react",
         "react-dom",
+        "react-dom/client",
         "react/jsx-runtime",
         "react/jsx-dev-runtime",
         "@graph-giraffe/core",
