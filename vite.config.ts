@@ -41,7 +41,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
       name: "GraphGiraffeReact",
-      formats: ["es", "cjs"],
+      formats: ["es"],
       fileName: "index",
     },
     rollupOptions: {
