@@ -1,6 +1,6 @@
 {
   "name": "@graph-giraffe/react",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "A React Wrapper For @graph-giraffe/core",
   "type": "module",
   "types": "./dist/index.d.ts",
