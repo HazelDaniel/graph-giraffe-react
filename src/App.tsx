@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from 'react';
+import { createContext, useContext, useRef, useState } from 'react';
 import {
   NodeEditor,
   ViewportPortal,
@@ -9,9 +9,12 @@ import {
   useGraphEvent,
 } from './index';
 import type {
+  ControlledNode,
+  ControlledEdge,
   NodeEditorHandle,
   NodeSkinProps,
   NodeSkinWrapper,
+  NodePositionChange,
 } from './types';
 
 import './App.css';
@@ -51,7 +54,15 @@ function MyNodeSkin({ node, isSelected, isLocked }: NodeSkinProps) {
 }
 
 // ─── HUD: viewport + graph state readouts ────────────────
-function HUD({ handle }: { handle: React.RefObject<NodeEditorHandle | null> }) {
+function HUD({
+  onAddNode,
+  onRemoteMove,
+  onRemoteAdd,
+}: {
+  onAddNode: () => void;
+  onRemoteMove: () => void;
+  onRemoteAdd: () => void;
+}) {
   const { x, y, zoom } = useViewport();
   const nodes = useNodes();
   const edges = useEdges();
@@ -72,13 +83,9 @@ function HUD({ handle }: { handle: React.RefObject<NodeEditorHandle | null> }) {
       >
         pan home
       </button>
-      <button
-        onClick={() => {
-          void handle.current?.addNode(200, 120, `node-${Date.now() % 1000}`);
-        }}
-      >
-        add node
-      </button>
+      <button onClick={onAddNode}>add node</button>
+      <button onClick={onRemoteMove}>remote move #1</button>
+      <button onClick={onRemoteAdd}>remote add</button>
     </div>
   );
 }
@@ -114,30 +121,6 @@ function OverlayDemo() {
   );
 }
 
-// ─── Seed a few nodes once the editor is ready ─────────
-function SeedNodes({ handle }: { handle: React.RefObject<NodeEditorHandle | null> }) {
-  // Children only mount once the editor is initialised, so this runs once.
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const alpha = await handle.current?.addNode(80, 120, 'alpha');
-      const beta = await handle.current?.addNode(360, 200, 'beta');
-      await handle.current?.addNode(640, 120, 'gamma');
-      if (cancelled || !alpha || !beta) return;
-      handle.current?.addEdge({
-        sourceNodeId: alpha.id,
-        sourceHandleSide: 'right',
-        targetNodeId: beta.id,
-        targetHandleSide: 'left',
-      });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [handle]);
-  return null;
-}
-
 function EventLogger() {
   useGraphEvent('connect', (payload) => {
     console.log('[demo] connect', payload);
@@ -148,8 +131,35 @@ function EventLogger() {
   return null;
 }
 
+let nextId = 4;
+
 export default function App() {
   const editorRef = useRef<NodeEditorHandle>(null);
+
+  // External source of truth, like Redux in a real app.
+  const [graph, setGraph] = useState<{
+    nodes: ControlledNode[];
+    edges: ControlledEdge[];
+  }>({
+    nodes: [
+      { id: 1, type: 'node', position: { x: 80, y: 120 }, label: 'alpha' },
+      { id: 2, type: 'node', position: { x: 360, y: 200 }, label: 'beta' },
+      { id: 3, type: 'node', position: { x: 640, y: 120 }, label: 'gamma' },
+    ],
+    edges: [{ id: 1, source: 1, target: 2 }],
+  });
+
+  const handlePositionChange = (changes: NodePositionChange[]) => {
+    // Consumer folds editor-originated drags into its state. The wrapper
+    // suppresses the echo, so this never re-imports.
+    setGraph((g) => ({
+      ...g,
+      nodes: g.nodes.map((n) => {
+        const change = changes.find((c) => c.id === n.id);
+        return change ? { ...n, position: change.position } : n;
+      }),
+    }));
+  };
 
   return (
     <div className="app-root">
@@ -160,11 +170,50 @@ export default function App() {
         renderMode="dom"
         skins={{ node: MyNodeSkin }}
         skinWrapper={DemoThemeProvider}
+        nodes={graph.nodes}
+        edges={graph.edges}
+        onNodePositionChange={handlePositionChange}
         style={{ width: '100vw', height: '100vh' }}
       >
         <EventLogger />
-        <SeedNodes handle={editorRef} />
-        <HUD handle={editorRef} />
+        <HUD
+          onAddNode={() =>
+            setGraph((g) => ({
+              ...g,
+              nodes: [
+                ...g.nodes,
+                {
+                  id: nextId++,
+                  type: 'node',
+                  position: { x: 200 + Math.random() * 300, y: 300 },
+                  label: `node-${nextId - 1}`,
+                },
+              ],
+            }))
+          }
+          onRemoteMove={() =>
+            setGraph((g) => ({
+              ...g,
+              nodes: g.nodes.map((n) =>
+                n.id === 1 ? { ...n, position: { x: 480, y: 60 } } : n
+              ),
+            }))
+          }
+          onRemoteAdd={() =>
+            setGraph((g) => ({
+              ...g,
+              nodes: [
+                ...g.nodes,
+                {
+                  id: nextId++,
+                  type: 'node',
+                  position: { x: 900, y: 260 },
+                  label: `remote-${nextId - 1}`,
+                },
+              ],
+            }))
+          }
+        />
         <OverlayDemo />
       </NodeEditor>
     </div>

@@ -125,6 +125,42 @@ export interface Viewport {
 }
 
 /**
+ * A node supplied from external (controlled) state. Positions are **world
+ * coordinates** (React Flow convention) — children are converted to local
+ * coordinates relative to their parent before being applied.
+ */
+export interface ControlledNode {
+  id: number;
+  /** Node type name (built-in or registered custom type). */
+  type: string;
+  /** World position of the node. */
+  position: { x: number; y: number };
+  /** Parent node id, or null/undefined for root nodes. */
+  parentId?: number | null;
+  /** Display label. Defaults to `Node {id}`. */
+  label?: string;
+  width?: number;
+  height?: number;
+}
+
+/**
+ * An edge supplied from external (controlled) state.
+ */
+export interface ControlledEdge {
+  id: number;
+  source: number;
+  target: number;
+  sourceHandle?: HandleSide;
+  targetHandle?: HandleSide;
+}
+
+/** Position change reported after an editor-originated drag. */
+export interface NodePositionChange {
+  id: number;
+  position: { x: number; y: number };
+}
+
+/**
  * Props accepted by the `<NodeEditor>` component.
  */
 export interface NodeEditorProps {
@@ -174,6 +210,28 @@ export interface NodeEditorProps {
    * skins consume external contexts (Redux, theme, ...).
    */
   skinWrapper?: NodeSkinWrapper;
+
+  // ── Controlled graph (external source of truth) ────────
+  /**
+   * External node list. When provided, the wrapper treats it as the source of
+   * truth for graph structure: on change it rebuilds the editor's graph via
+   * `importGraph` (structure, positions, labels). Editor-originated drags are
+   * reported back through `onNodePositionChange` instead of being re-imported.
+   *
+   * Note: each controlled sync clears the editor's undo history (imports are a
+   * fresh baseline).
+   */
+  nodes?: ControlledNode[];
+  /** External edge list (same semantics as `nodes`). */
+  edges?: ControlledEdge[];
+  /**
+   * Fired after the user drags nodes in the editor, with their new world
+   * positions — the consumer should fold these into its state. Position-only
+   * echo of these changes back into `nodes` is suppressed by the wrapper.
+   */
+  onNodePositionChange?: (
+    changes: NodePositionChange[]
+  ) => void;
 
   // ── Sync event callbacks ───────────────────────────────
   onConnect?: SyncHandler<GraphEvents['connect']>;

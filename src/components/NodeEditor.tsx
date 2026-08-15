@@ -26,7 +26,15 @@ import type {
   SyncHandler,
   AsyncHandler,
   NodeData,
+  SerializedNode,
+  SerializedEdge,
 } from "@graph-giraffe/core";
+
+import type {
+  ControlledNode,
+  ControlledEdge,
+  NodePositionChange,
+} from "../types";
 
 import type { Root } from "react-dom/client";
 
@@ -150,6 +158,100 @@ function createReactDomRenderer(
  * Types without a consumer skin fall back to the bundled DOM skins shipped in
  * core, so `renderMode: "dom"` works with zero configuration.
  */
+interface CoreStoreLike {
+  get(id: number): NodeData | undefined;
+  allNodesMap: Map<number, NodeData>;
+}
+
+/**
+ * World position of a node: sum of local positions up the parent chain.
+ */
+function worldPositionOf(
+  store: CoreStoreLike,
+  id: number
+): { x: number; y: number } | undefined {
+  const node = store.get(id);
+  if (!node) return undefined;
+  let x = node.localX;
+  let y = node.localY;
+  let parentId = node.parentId;
+  while (parentId !== null) {
+    const parent = store.get(parentId);
+    if (!parent) break;
+    x += parent.localX;
+    y += parent.localY;
+    parentId = parent.parentId;
+  }
+  return { x, y };
+}
+
+/**
+ * Rebuild the editor's graph from external controlled state. Preserves editor
+ * metadata (theme, camera, textures) by starting from `exportGraph()` and only
+ * swapping the node/edge lists. Import resets selection + undo history.
+ */
+function applyControlledGraph(
+  ed: CoreNodeEditor,
+  nodes: ControlledNode[],
+  edges: ControlledEdge[]
+): void {
+  const store = (ed as unknown as { store: CoreStoreLike }).store;
+  const snapshot = ed.exportGraph();
+
+  snapshot.nodes = nodes.map((n) => {
+    const parentWorld =
+      n.parentId != null ? worldPositionOf(store, n.parentId) : undefined;
+    return {
+      id: n.id,
+      nodeType: n.type,
+      localX: parentWorld ? n.position.x - parentWorld.x : n.position.x,
+      localY: parentWorld ? n.position.y - parentWorld.y : n.position.y,
+      width: n.width ?? 160,
+      height: n.height ?? 48,
+      text: n.label ?? `Node ${n.id}`,
+      textureIds: { body: "", head: "" },
+      parentId: n.parentId ?? null,
+      childIds: [],
+      compositionRefId: null,
+    } satisfies SerializedNode;
+  });
+
+  snapshot.edges = edges.map((e) => ({
+    id: e.id,
+    sourceNodeId: e.source,
+    sourceHandleSide: e.sourceHandle ?? "right",
+    targetNodeId: e.target,
+    targetHandleSide: e.targetHandle ?? "left",
+    edgeType: "cubic",
+    headType: "arrow",
+    headSkinId: "arrow",
+    label: "",
+  }) satisfies SerializedEdge);
+
+  snapshot.counters = {
+    nodeId: nodes.reduce((max, n) => Math.max(max, n.id), 0),
+    edgeId: edges.reduce((max, e) => Math.max(max, e.id), 0),
+  };
+
+  ed.importGraph(snapshot);
+}
+
+/**
+ * Import external state when it differs from the last-applied fingerprint.
+ * `fingerprintRef` short-circuits echo loops (editor → callback → props → here).
+ */
+function syncControlledGraph(
+  ed: CoreNodeEditor,
+  nodes: ControlledNode[],
+  edges: ControlledEdge[],
+  fingerprintRef: { current: string | null }
+): void {
+  const fingerprint = JSON.stringify([nodes, edges]);
+  if (fingerprintRef.current === fingerprint) return;
+  applyControlledGraph(ed, nodes, edges);
+  fingerprintRef.current = fingerprint;
+}
+
 function applySkins(
   registry: NodeTypeRegistry,
   props: NodeEditorProps,
@@ -429,49 +531,114 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
         getNodeWorldPosition(id) {
           const ed = editorRef.current;
           if (!ed) return undefined;
-          const store = (ed as any).store as {
-            get(id: number): NodeData | undefined;
-          };
-          const node = store.get(id);
-          if (!node) return undefined;
-          let x = node.localX;
-          let y = node.localY;
-          let parentId = node.parentId;
-          while (parentId !== null) {
-            const parent = store.get(parentId);
-            if (!parent) break;
-            x += parent.localX;
-            y += parent.localY;
-            parentId = parent.parentId;
-          }
-          return { x, y };
+          const store = (ed as any).store as CoreStoreLike;
+          return worldPositionOf(store, id);
         },
 
         getNodeScreenPosition(id) {
           const ed = editorRef.current;
           if (!ed) return undefined;
-          const store = (ed as any).store as {
-            get(id: number): NodeData | undefined;
-          };
-          const node = store.get(id);
-          if (!node) return undefined;
-          let x = node.localX;
-          let y = node.localY;
-          let parentId = node.parentId;
-          while (parentId !== null) {
-            const parent = store.get(parentId);
-            if (!parent) break;
-            x += parent.localX;
-            y += parent.localY;
-            parentId = parent.parentId;
-          }
-          return ed.worldToScreen(x, y);
+          const store = (ed as any).store as CoreStoreLike;
+          const world = worldPositionOf(store, id);
+          if (!world) return undefined;
+          return ed.worldToScreen(world.x, world.y);
         },
       }),
       []
     );
 
-    const contextValue = useMemo(() => ({ editor }), [editor]);
+    // ── Controlled graph sync ────────────────────────────
+    const [graphVersion, setGraphVersion] = useState(0);
+    const controlledFingerprintRef = useRef<string | null>(null);
+    const draggingRef = useRef(false);
+    const pendingControlledSyncRef = useRef(false);
+
+    // Reconcile external `nodes`/`edges` props into the editor. Skipped while
+    // the user is mid-drag; a pending sync runs after `node:dragStop`.
+    useEffect(() => {
+      const ed = editorRef.current;
+      const { nodes, edges } = propsRef.current;
+      if (!ed || !nodes || !edges) return;
+      if (draggingRef.current) {
+        pendingControlledSyncRef.current = true;
+        return;
+      }
+      const before = controlledFingerprintRef.current;
+      syncControlledGraph(ed, nodes, edges, controlledFingerprintRef);
+      if (controlledFingerprintRef.current !== before) {
+        setGraphVersion((v) => v + 1);
+      }
+    }, [editor, props.nodes, props.edges]);
+
+    // Report editor-originated drags back to the consumer and keep the
+    // fingerprint in sync so the echo doesn't re-import.
+    useEffect(() => {
+      const ed = editorRef.current;
+      if (!ed) return;
+
+      const onDragStart = (): void => {
+        draggingRef.current = true;
+      };
+
+      const onDragStop = (payload: GraphEvents["node:dragStop"]): void => {
+        draggingRef.current = false;
+
+        const callback = propsRef.current.onNodePositionChange;
+        if (callback && payload.nodeIds.length > 0) {
+          const store = (ed as unknown as { store: CoreStoreLike }).store;
+          const changes: NodePositionChange[] = [];
+          for (const id of payload.nodeIds) {
+            const position = worldPositionOf(store, id);
+            if (position) changes.push({ id, position });
+          }
+          if (changes.length > 0) callback(changes);
+        }
+
+        // Fold the editor's current positions into the fingerprint so the
+        // consumer's echo of the drag doesn't trigger a re-import.
+        const { nodes, edges } = propsRef.current;
+        if (nodes && edges) {
+          const store = (ed as unknown as { store: CoreStoreLike }).store;
+          const syncedNodes = nodes.map((n) => {
+            const position = worldPositionOf(store, n.id);
+            return position ? { ...n, position } : n;
+          });
+          controlledFingerprintRef.current = JSON.stringify([
+            syncedNodes,
+            edges,
+          ]);
+        }
+
+        if (pendingControlledSyncRef.current) {
+          pendingControlledSyncRef.current = false;
+          const { nodes: nextNodes, edges: nextEdges } = propsRef.current;
+          if (nextNodes && nextEdges) {
+            const before = controlledFingerprintRef.current;
+            syncControlledGraph(
+              ed,
+              nextNodes,
+              nextEdges,
+              controlledFingerprintRef
+            );
+            if (controlledFingerprintRef.current !== before) {
+              setGraphVersion((v) => v + 1);
+            }
+          }
+        }
+      };
+
+      const offDragStart = ed.events.on("node:dragStart", onDragStart);
+      const offDragStop = ed.events.on("node:dragStop", onDragStop);
+      return () => {
+        offDragStart();
+        offDragStop();
+      };
+    }, [editor]);
+
+    const contextValue = useMemo(
+      () => ({ editor, graphVersion }),
+      [editor, graphVersion]
+    );
 
     return (
       <NodeEditorContext.Provider value={contextValue}>

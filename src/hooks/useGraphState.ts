@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useNodeEditor } from './useNodeEditor';
+import { NodeEditorContext } from '../context/NodeEditorContext';
 import type { NodeData, EdgeData, GraphEvents } from '@graph-giraffe/core';
 
 /**
@@ -66,6 +67,7 @@ interface CoreEdgeStoreLike {
  */
 export function useNodes(): NodeData[] {
   const editor = useNodeEditor();
+  const { graphVersion } = useContext(NodeEditorContext);
   const version = useGraphVersion();
 
   return useMemo(() => {
@@ -73,7 +75,7 @@ export function useNodes(): NodeData[] {
     const store = (editor as unknown as { store: CoreStoreLike }).store;
     return Array.from(store.allNodesMap.values());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, version]);
+  }, [editor, version, graphVersion]);
 }
 
 /**
@@ -88,6 +90,7 @@ export function useNodes(): NodeData[] {
  */
 export function useEdges(): EdgeData[] {
   const editor = useNodeEditor();
+  const { graphVersion } = useContext(NodeEditorContext);
   const version = useGraphVersion();
 
   return useMemo(() => {
@@ -96,5 +99,5 @@ export function useEdges(): EdgeData[] {
       .edgeStore;
     return edgeStore.allEdges();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, version]);
+  }, [editor, version, graphVersion]);
 }
