@@ -25,6 +25,7 @@ import type {
   GraphBeforeEvents,
   SyncHandler,
   AsyncHandler,
+  NodeData,
 } from "@graph-giraffe/core";
 
 import type { Root } from "react-dom/client";
@@ -100,24 +101,41 @@ function hasSkins(props: NodeEditorProps): boolean {
 }
 
 /**
- * Bridge a declarative React skin component to core's `DomNodeRenderer`. Each
- * view mounts a React root hosting the component; state changes flow through
- * `updateView` re-renders and teardown unmounts the root.
+ * Resolve the skin content for a node view, wrapped in the consumer's
+ * `skinWrapper` provider when one is supplied. The wrapper is resolved
+ * lazily via `getWrapper` so it always reflects the latest render.
  */
+function renderSkinContent(
+  Component: NodeSkinComponent,
+  ctx: Parameters<DomNodeRenderer["createView"]>[0],
+  getWrapper: () => NodeEditorProps["skinWrapper"]
+): React.ReactElement {
+  const Wrapper = getWrapper();
+  if (Wrapper) {
+    return (
+      <Wrapper>
+        <Component {...ctx} />
+      </Wrapper>
+    );
+  }
+  return <Component {...ctx} />;
+}
+
 function createReactDomRenderer(
-  Component: NodeSkinComponent
+  Component: NodeSkinComponent,
+  getWrapper: () => NodeEditorProps["skinWrapper"]
 ): DomNodeRenderer {
   return {
     createView(ctx) {
       const element = document.createElement("div");
       const root = createRoot(element);
-      root.render(<Component {...ctx} />);
+      root.render(renderSkinContent(Component, ctx, getWrapper));
       (element as unknown as { __ggDomRoot?: Root }).__ggDomRoot = root;
       return element;
     },
     updateView(ctx) {
       const host = ctx.element as unknown as { __ggDomRoot?: Root };
-      host.__ggDomRoot?.render(<Component {...ctx} />);
+      host.__ggDomRoot?.render(renderSkinContent(Component, ctx, getWrapper));
     },
     destroyView(ctx) {
       const host = ctx.element as unknown as { __ggDomRoot?: Root };
@@ -132,7 +150,11 @@ function createReactDomRenderer(
  * Types without a consumer skin fall back to the bundled DOM skins shipped in
  * core, so `renderMode: "dom"` works with zero configuration.
  */
-function applySkins(registry: NodeTypeRegistry, props: NodeEditorProps): void {
+function applySkins(
+  registry: NodeTypeRegistry,
+  props: NodeEditorProps,
+  getWrapper: () => NodeEditorProps["skinWrapper"]
+): void {
   if (!hasSkins(props)) {
     registerDomNodeDescriptors(registry);
     return;
@@ -141,7 +163,10 @@ function applySkins(registry: NodeTypeRegistry, props: NodeEditorProps): void {
     const Skin = resolveSkin(descriptor.type, props);
     registry.replace(
       Skin
-        ? { ...descriptor, domRenderer: createReactDomRenderer(Skin) }
+        ? {
+            ...descriptor,
+            domRenderer: createReactDomRenderer(Skin, getWrapper),
+          }
         : descriptor
     );
   }
@@ -220,7 +245,11 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
         if (propsRef.current.renderMode === "dom") {
           // Replace built-ins with their DOM skins (bundled, or React-component
           // skins from props). Single call covers the no-skin default too.
-          applySkins(instance.typeRegistry, propsRef.current);
+          applySkins(
+            instance.typeRegistry,
+            propsRef.current,
+            () => propsRef.current.skinWrapper
+          );
         } else if (hasSkins(propsRef.current)) {
           throw new Error(
             '@graph-giraffe/react: skin props require `renderMode="dom"`.'
@@ -307,12 +336,15 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
           return editorRef.current;
         },
 
-        addNode(x, y, label, type = "node") {
+        async addNode(x, y, label, type = "node") {
           const ed = editorRef.current;
-          if (!ed) return undefined;
-          const store = (ed as any).store;
-          const theme = store.getTheme();
-          return store.add(x, y, label, theme, type);
+          if (!ed) return null;
+          // Route through the editor's command-based path so the action is
+          // undoable, emits `history:command` (which the DOM layer listens to
+          // in order to create/remove node views), and `before:nodeCreate`
+          // hooks can block it. Calling the store directly would create the
+          // node without a DOM view in `renderMode: "dom"`.
+          return ed.addNode(type, x, y, null, label);
         },
 
         removeNode(id) {
@@ -322,6 +354,8 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
           const edgeStore = (ed as any).edgeStore;
           edgeStore.removeEdgesForNode(id);
           store.remove(id);
+          // Reconcile the DOM layer so views of removed nodes are torn down.
+          (ed as any).domNodeLayer?.syncAll?.();
         },
 
         getNode(id) {
@@ -356,6 +390,82 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
 
         setConnectionMode(mode) {
           editorRef.current?.setConnectionMode(mode);
+        },
+
+        screenToWorld(screenX, screenY) {
+          const ed = editorRef.current;
+          if (!ed) return { x: 0, y: 0 };
+          return ed.screenToWorld(screenX, screenY);
+        },
+
+        worldToScreen(worldX, worldY) {
+          const ed = editorRef.current;
+          if (!ed) return { x: 0, y: 0 };
+          return ed.worldToScreen(worldX, worldY);
+        },
+
+        getViewport() {
+          const ed = editorRef.current;
+          if (!ed) return { x: 0, y: 0, zoom: 1 };
+          const { panX, panY, zoom } = ed.getCameraState();
+          return { x: panX, y: panY, zoom };
+        },
+
+        setViewport(x, y, zoom) {
+          const ed = editorRef.current;
+          if (!ed) return;
+          const camera = (ed as any).camera as {
+            setState(x: number, y: number, zoom: number): void;
+          };
+          camera.setState(x, y, zoom);
+        },
+
+        panTo(worldX, worldY, options) {
+          const ed = editorRef.current;
+          if (!ed) return Promise.resolve();
+          return ed.panTo(worldX, worldY, options);
+        },
+
+        getNodeWorldPosition(id) {
+          const ed = editorRef.current;
+          if (!ed) return undefined;
+          const store = (ed as any).store as {
+            get(id: number): NodeData | undefined;
+          };
+          const node = store.get(id);
+          if (!node) return undefined;
+          let x = node.localX;
+          let y = node.localY;
+          let parentId = node.parentId;
+          while (parentId !== null) {
+            const parent = store.get(parentId);
+            if (!parent) break;
+            x += parent.localX;
+            y += parent.localY;
+            parentId = parent.parentId;
+          }
+          return { x, y };
+        },
+
+        getNodeScreenPosition(id) {
+          const ed = editorRef.current;
+          if (!ed) return undefined;
+          const store = (ed as any).store as {
+            get(id: number): NodeData | undefined;
+          };
+          const node = store.get(id);
+          if (!node) return undefined;
+          let x = node.localX;
+          let y = node.localY;
+          let parentId = node.parentId;
+          while (parentId !== null) {
+            const parent = store.get(parentId);
+            if (!parent) break;
+            x += parent.localX;
+            y += parent.localY;
+            parentId = parent.parentId;
+          }
+          return ed.worldToScreen(x, y);
         },
       }),
       []
