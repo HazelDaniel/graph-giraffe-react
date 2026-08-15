@@ -141,6 +141,8 @@ export interface ControlledNode {
   label?: string;
   width?: number;
   height?: number;
+  /** When true, the node cannot be dragged (core lock semantics). */
+  locked?: boolean;
 }
 
 /**

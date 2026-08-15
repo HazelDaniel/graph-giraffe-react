@@ -1,6 +1,5 @@
 import { defineConfig } from "vite";
-import react, { reactCompilerPreset } from "@vitejs/plugin-react";
-import babel from "@rolldown/plugin-babel";
+import react from "@vitejs/plugin-react";
 import dts from "vite-plugin-dts";
 import { resolve } from "node:path";
 import { cpSync, mkdirSync } from "node:fs";
@@ -22,9 +21,6 @@ function copyCoreAssets() {
 export default defineConfig({
   plugins: [
     react(),
-    babel({
-      presets: [reactCompilerPreset()],
-    }),
     dts({
       tsconfigPath: resolve(__dirname, "tsconfig.app.json"),
       rollupTypes: true,

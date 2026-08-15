@@ -195,12 +195,20 @@ function applyControlledGraph(
   nodes: ControlledNode[],
   edges: ControlledEdge[]
 ): void {
-  const store = (ed as unknown as { store: CoreStoreLike }).store;
   const snapshot = ed.exportGraph();
+
+  // Build world positions from the incoming array itself. The editor store is
+  // NOT a reliable source: on first import it is empty, and on re-import it
+  // holds the previous graph (stale positions). `ControlledNode.position` is
+  // documented as a world coordinate, so the incoming array is authoritative.
+  const worldByNodeId = new Map<number, { x: number; y: number }>();
+  for (const n of nodes) {
+    worldByNodeId.set(n.id, n.position);
+  }
 
   snapshot.nodes = nodes.map((n) => {
     const parentWorld =
-      n.parentId != null ? worldPositionOf(store, n.parentId) : undefined;
+      n.parentId != null ? worldByNodeId.get(n.parentId) : undefined;
     return {
       id: n.id,
       nodeType: n.type,
@@ -213,6 +221,7 @@ function applyControlledGraph(
       parentId: n.parentId ?? null,
       childIds: [],
       compositionRefId: null,
+      isLocked: n.locked ?? false,
     } satisfies SerializedNode;
   });
 
