@@ -376,8 +376,8 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
 
       return () => {
         cancelled = true;
-        // Reset the core singleton so a future mount can re-create it.
-        (CoreNodeEditor as any)._instance = null;
+        // Release the core singleton before removing the host DOM.
+        CoreNodeEditor.release();
         editorRef.current = null;
         setEditor(null);
         if (container) container.innerHTML = "";
