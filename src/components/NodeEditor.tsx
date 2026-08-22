@@ -26,8 +26,6 @@ import type {
   SyncHandler,
   AsyncHandler,
   NodeData,
-  SerializedNode,
-  SerializedEdge,
 } from "@graph-giraffe/core";
 
 import type {
@@ -451,52 +449,44 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
           const ed = editorRef.current;
           if (!ed) return null;
           // Route through the editor's command-based path so the action is
-          // undoable, emits `history:command` (which the DOM layer listens to
-          // in order to create/remove node views), and `before:nodeCreate`
-          // hooks can block it. Calling the store directly would create the
-          // node without a DOM view in `renderMode: "dom"`.
+          // undoable and DOM views remain synchronized by core.
           return ed.addNode(type, x, y, null, label);
         },
 
         removeNode(id) {
           const ed = editorRef.current;
           if (!ed) return;
-          const store = (ed as any).store;
-          const edgeStore = (ed as any).edgeStore;
-          edgeStore.removeEdgesForNode(id);
-          store.remove(id);
-          // Reconcile the DOM layer so views of removed nodes are torn down.
-          (ed as any).domNodeLayer?.syncAll?.();
+          void ed.removeNode(id);
         },
 
         getNode(id) {
           const ed = editorRef.current;
           if (!ed) return undefined;
-          return (ed as any).store.get(id);
+          return getCoreNodes(ed).find((node) => node.id === id);
         },
 
         getNodes() {
           const ed = editorRef.current;
           if (!ed) return [];
-          return (ed as any).store.visibleNodes();
+          return getCoreNodes(ed);
         },
 
         addEdge(params) {
           const ed = editorRef.current;
           if (!ed) return null;
-          return (ed as any).edgeStore.add(params);
+          return ed.addEdge(params);
         },
 
         removeEdge(id) {
           const ed = editorRef.current;
           if (!ed) return null;
-          return (ed as any).edgeStore.remove(id);
+          return ed.removeEdge(id);
         },
 
         getEdges() {
           const ed = editorRef.current;
           if (!ed) return [];
-          return (ed as any).edgeStore.allEdges();
+          return getCoreEdges(ed);
         },
 
         setConnectionMode(mode) {
@@ -525,10 +515,7 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
         setViewport(x, y, zoom) {
           const ed = editorRef.current;
           if (!ed) return;
-          const camera = (ed as any).camera as {
-            setState(x: number, y: number, zoom: number): void;
-          };
-          camera.setState(x, y, zoom);
+          ed.setViewport(x, y, zoom);
         },
 
         panTo(worldX, worldY, options) {
@@ -540,15 +527,13 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
         getNodeWorldPosition(id) {
           const ed = editorRef.current;
           if (!ed) return undefined;
-          const store = (ed as any).store as CoreStoreLike;
-          return worldPositionOf(store, id);
+          return getCoreWorldPosition(ed, id);
         },
 
         getNodeScreenPosition(id) {
           const ed = editorRef.current;
           if (!ed) return undefined;
-          const store = (ed as any).store as CoreStoreLike;
-          const world = worldPositionOf(store, id);
+          const world = getCoreWorldPosition(ed, id);
           if (!world) return undefined;
           return ed.worldToScreen(world.x, world.y);
         },
@@ -594,10 +579,9 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
 
         const callback = propsRef.current.onNodePositionChange;
         if (callback && payload.nodeIds.length > 0) {
-          const store = (ed as unknown as { store: CoreStoreLike }).store;
           const changes: NodePositionChange[] = [];
           for (const id of payload.nodeIds) {
-            const position = worldPositionOf(store, id);
+            const position = getCoreWorldPosition(ed, id);
             if (position) changes.push({ id, position });
           }
           if (changes.length > 0) callback(changes);
@@ -607,9 +591,8 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
         // consumer's echo of the drag doesn't trigger a re-import.
         const { nodes, edges } = propsRef.current;
         if (nodes && edges) {
-          const store = (ed as unknown as { store: CoreStoreLike }).store;
           const syncedNodes = nodes.map((n) => {
-            const position = worldPositionOf(store, n.id);
+            const position = getCoreWorldPosition(ed, n.id);
             return position ? { ...n, position } : n;
           });
           controlledFingerprintRef.current = JSON.stringify([

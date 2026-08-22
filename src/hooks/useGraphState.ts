@@ -43,14 +43,6 @@ function useGraphVersion(): number {
   return version;
 }
 
-interface CoreStoreLike {
-  allNodesMap: Map<number, NodeData>;
-}
-
-interface CoreEdgeStoreLike {
-  allEdges(): EdgeData[];
-}
-
 /**
  * Returns the live node list (all nodes, including nested children).
  *
@@ -72,8 +64,7 @@ export function useNodes(): NodeData[] {
 
   return useMemo(() => {
     if (!editor) return [];
-    const store = (editor as unknown as { store: CoreStoreLike }).store;
-    return Array.from(store.allNodesMap.values());
+    return editor.getNodes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, version, graphVersion]);
 }
@@ -95,9 +86,7 @@ export function useEdges(): EdgeData[] {
 
   return useMemo(() => {
     if (!editor) return [];
-    const edgeStore = (editor as unknown as { edgeStore: CoreEdgeStoreLike })
-      .edgeStore;
-    return edgeStore.allEdges();
+    return editor.getEdges();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor, version, graphVersion]);
 }

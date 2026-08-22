@@ -7,6 +7,7 @@
 // ─── Re-export every public core type ────────────────────
 export type {
   NodeEditorConfig,
+  CreateEdgeParams,
   NodeData,
   EdgeData,
   NodeType,
@@ -79,6 +80,7 @@ import type {
   NodeType,
   HandleSide,
   NodeEditorConfig,
+  CreateEdgeParams,
   AddUploadedTextureParams,
   DomNodeViewContext,
   GraphEvents,
@@ -289,12 +291,7 @@ export interface NodeEditorHandle {
   getNodes(): NodeData[];
 
   // ── Edge operations ────────────────────────────────────
-  addEdge(params: {
-    sourceNodeId: number;
-    sourceHandleSide: HandleSide;
-    targetNodeId: number;
-    targetHandleSide: HandleSide;
-  }): EdgeData | null;
+  addEdge(params: CreateEdgeParams): Promise<EdgeData | null>;
   removeEdge(id: number): EdgeData | null;
   getEdges(): EdgeData[];
 
