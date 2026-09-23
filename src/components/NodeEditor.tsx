@@ -158,7 +158,11 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
         config,
         propsRef.current.textureSkins ?? []
         ).then((instance) => {
-        if (cancelled) return;
+        if (cancelled) {
+          instance.dispose();
+          CoreNodeEditor.release();
+          return;
+        }
 
         registerCustomPrimitives(
           instance.typeRegistry,
@@ -190,6 +194,7 @@ export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
 
       return () => {
         cancelled = true;
+        editorRef.current?.dispose();
         // Release the core singleton before removing the host DOM.
         CoreNodeEditor.release();
         editorRef.current = null;

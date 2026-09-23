@@ -42,10 +42,10 @@ export type {
   SyncHandler,
   AsyncHandler,
   NodeTypeDescriptor,
+  PrimitiveBoundsAuthority,
   NodeTypeRegistry,
   DomNodeRenderer,
   DomNodeViewContext,
-  PrimitiveMeasurementTemplate,
 } from '@graph-giraffe/core';
 
 export {
@@ -86,7 +86,6 @@ import type {
   CreateEdgeParams,
   AddUploadedTextureParams,
   DomNodeViewContext,
-  PrimitiveMeasurementTemplate,
   GraphEvents,
   GraphBeforeEvents,
   SyncHandler,
@@ -95,8 +94,8 @@ import type {
 } from '@graph-giraffe/core';
 
 /**
- * Built-in node type names. Skins may be provided for any of these (or any
- * custom type via the generic `skins` record).
+ * Built-in primitive type names. React primitives may be provided for any of
+ * these or for custom types through the keyed `primitives` record.
  */
 export type BuiltinNodeType =
   | 'node'
@@ -115,6 +114,14 @@ export type NodeSkinProps = DomNodeViewContext;
 
 /** A declarative DOM skin for a node type. */
 export type NodeSkinComponent = ComponentType<NodeSkinProps>;
+
+/**
+ * A declarative primitive rendered by the React adapter. The same component
+ * is committed visibly and in the hidden measurement root; `isMeasurement`
+ * identifies the latter so layout-only rendering can disable effects or
+ * interaction affordances without changing its geometry.
+ */
+export type NodePrimitiveComponent = ComponentType<NodeSkinProps>;
 
 /**
  * Wraps every React skin (and its node subtree) in a provider tree.
@@ -212,10 +219,15 @@ export interface NodeEditorProps {
    */
   renderMode?: 'webgl' | 'dom';
 
-  // ── Declarative DOM skins (require `renderMode: "dom"`) ──
+  // ── Declarative React primitives (require `renderMode: "dom"`) ──
   /**
-   * Generic skin map keyed by node type (built-ins and custom types alike).
-   * Overrides the per-type convenience props below when both are set.
+   * Canonical declarative primitive map. Each component is used for visible
+   * DOM rendering and synchronous intrinsic measurement.
+   */
+  primitives?: Partial<Record<BuiltinNodeType | string, NodePrimitiveComponent>>;
+  /**
+   * Legacy visible-skin map keyed by node type. It remains a compatibility
+   * alias for `primitives` and overrides the convenience props below.
    */
   skins?: Partial<Record<BuiltinNodeType | string, NodeSkinComponent>>;
   /** DOM skin for the `node` primitive. */
@@ -237,14 +249,6 @@ export interface NodeEditorProps {
    * skins consume external contexts (Redux, theme, ...).
    */
   skinWrapper?: NodeSkinWrapper;
-
-  /**
-   * Synchronous DOM templates used only to measure intrinsic primitive size.
-   * These are separate from React skins because React commits asynchronously.
-   */
-  measurementTemplates?: Partial<
-    Record<BuiltinNodeType | string, PrimitiveMeasurementTemplate>
-  >;
 
   // ── Controlled graph (external source of truth) ────────
   /**

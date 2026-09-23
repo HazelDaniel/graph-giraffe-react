@@ -96,12 +96,8 @@ export default function App() {
     nodes: ControlledNode[];
     edges: ControlledEdge[];
   }>({
-    nodes: [
-      { id: 1, type: 'node', position: { x: 80, y: 120 }, label: 'alpha' },
-      { id: 2, type: 'node', position: { x: 360, y: 200 }, label: 'beta' },
-      { id: 3, type: 'node', position: { x: 640, y: 120 }, label: 'gamma' },
-    ],
-    edges: [{ id: 1, source: 1, target: 2 }],
+    nodes: [],
+    edges: [],
   });
 
   const handlePositionChange = (changes: NodePositionChange[]) => {
@@ -122,7 +118,7 @@ export default function App() {
         connectionMode="node"
         debug
         renderMode="dom"
-        skins={{ node: MyNodeSkin }}
+        primitives={{ node: MyNodeSkin }}
         skinWrapper={DemoThemeProvider}
         nodes={graph.nodes}
         edges={graph.edges}
