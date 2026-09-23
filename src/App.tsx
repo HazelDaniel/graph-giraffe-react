@@ -1,17 +1,13 @@
-import { createContext, useContext, useRef, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import {
   NodeEditor,
   ViewportPortal,
   useViewport,
-  useNodes,
-  useEdges,
-  useNodeEditor,
   useGraphEvent,
 } from './index';
 import type {
   ControlledNode,
   ControlledEdge,
-  NodeEditorHandle,
   NodeSkinProps,
   NodeSkinWrapper,
   NodePositionChange,
@@ -49,43 +45,6 @@ function MyNodeSkin({ node, isSelected, isLocked }: NodeSkinProps) {
     >
       {node.text}
       {isLocked ? ' 🔒' : ''}
-    </div>
-  );
-}
-
-// ─── HUD: viewport + graph state readouts ────────────────
-function HUD({
-  onAddNode,
-  onRemoteMove,
-  onRemoteAdd,
-}: {
-  onAddNode: () => void;
-  onRemoteMove: () => void;
-  onRemoteAdd: () => void;
-}) {
-  const { x, y, zoom } = useViewport();
-  const nodes = useNodes();
-  const edges = useEdges();
-  const editor = useNodeEditor();
-
-  return (
-    <div className="hud">
-      <div>
-        viewport {x.toFixed(0)},{y.toFixed(0)} @ {zoom.toFixed(2)}
-      </div>
-      <div>
-        nodes {nodes.length} · edges {edges.length}
-      </div>
-      <button
-        onClick={() => {
-          void editor?.panTo(0, 0, { zoom: 1 });
-        }}
-      >
-        pan home
-      </button>
-      <button onClick={onAddNode}>add node</button>
-      <button onClick={onRemoteMove}>remote move #1</button>
-      <button onClick={onRemoteAdd}>remote add</button>
     </div>
   );
 }
@@ -131,11 +90,7 @@ function EventLogger() {
   return null;
 }
 
-let nextId = 4;
-
 export default function App() {
-  const editorRef = useRef<NodeEditorHandle>(null);
-
   // External source of truth, like Redux in a real app.
   const [graph, setGraph] = useState<{
     nodes: ControlledNode[];
@@ -164,7 +119,6 @@ export default function App() {
   return (
     <div className="app-root">
       <NodeEditor
-        ref={editorRef}
         connectionMode="node"
         debug
         renderMode="dom"
@@ -176,44 +130,6 @@ export default function App() {
         style={{ width: '100vw', height: '100vh' }}
       >
         <EventLogger />
-        <HUD
-          onAddNode={() =>
-            setGraph((g) => ({
-              ...g,
-              nodes: [
-                ...g.nodes,
-                {
-                  id: nextId++,
-                  type: 'node',
-                  position: { x: 200 + Math.random() * 300, y: 300 },
-                  label: `node-${nextId - 1}`,
-                },
-              ],
-            }))
-          }
-          onRemoteMove={() =>
-            setGraph((g) => ({
-              ...g,
-              nodes: g.nodes.map((n) =>
-                n.id === 1 ? { ...n, position: { x: 480, y: 60 } } : n
-              ),
-            }))
-          }
-          onRemoteAdd={() =>
-            setGraph((g) => ({
-              ...g,
-              nodes: [
-                ...g.nodes,
-                {
-                  id: nextId++,
-                  type: 'node',
-                  position: { x: 900, y: 260 },
-                  label: `remote-${nextId - 1}`,
-                },
-              ],
-            }))
-          }
-        />
         <OverlayDemo />
       </NodeEditor>
     </div>
