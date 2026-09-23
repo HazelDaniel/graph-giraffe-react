@@ -4,6 +4,7 @@
 
 // ─── Component ───────────────────────────────────────────
 export { NodeEditor } from './components/NodeEditor';
+export { createReactMeasurementTemplate } from './adapter/react-renderer';
 export { ViewportPortal } from './components/ViewportPortal';
 export type { ViewportPortalProps } from './components/ViewportPortal';
 

@@ -10,6 +10,7 @@ export type {
   CreateEdgeParams,
   NodeData,
   EdgeData,
+  GraphProjection,
   NodeType,
   ContainerNodeType,
   LeafNodeType,
@@ -44,6 +45,7 @@ export type {
   NodeTypeRegistry,
   DomNodeRenderer,
   DomNodeViewContext,
+  PrimitiveMeasurementTemplate,
 } from '@graph-giraffe/core';
 
 export {
@@ -78,15 +80,18 @@ import type {
   EdgeData,
   ConnectionMode,
   NodeType,
+  NodeTypeDescriptor,
   HandleSide,
   NodeEditorConfig,
   CreateEdgeParams,
   AddUploadedTextureParams,
   DomNodeViewContext,
+  PrimitiveMeasurementTemplate,
   GraphEvents,
   GraphBeforeEvents,
   SyncHandler,
   AsyncHandler,
+  NodePropType,
 } from '@graph-giraffe/core';
 
 /**
@@ -141,10 +146,22 @@ export interface ControlledNode {
   parentId?: number | null;
   /** Display label. Defaults to `Node {id}`. */
   label?: string;
-  width?: number;
-  height?: number;
+  /**
+   * Required bounds — the DOM view is a pure mirror of the underlying WebGL
+   * primitive, so the consumer owns the size. Props never auto-size a node:
+   * a DOM view taller than the primitive's bounds breaks picking/dragging on
+   * the overflowing portion.
+   */
+  width: number;
+  height: number;
   /** When true, the node cannot be dragged (core lock semantics). */
   locked?: boolean;
+  /**
+   * Dynamic properties dictating node body height and overlay text — the same
+   * shape as the core's `NodeData.props`, exposed to skin components as
+   * `ctx.node.props`. The consumer remains responsible for sizing.
+   */
+  props?: NodePropType;
 }
 
 /**
@@ -175,10 +192,16 @@ export interface NodeEditorProps {
   handleStyle?: NodeEditorConfig['handleStyle'];
   /** Base path for fetching core assets (atlases). Defaults to 'assets'. */
   assetsPath?: string;
+  /** Runtime lower zoom bound; set equal to maxZoom to lock zoom. */
+  minZoom?: number;
+  /** Runtime upper zoom bound; set equal to minZoom to lock zoom. */
+  maxZoom?: number;
   /** Texture skins to register on initialisation. */
   textureSkins?: AddUploadedTextureParams[];
   /** Enable verbose event logging to the console. */
   debug?: boolean;
+  /** Primitive descriptors registered before the editor begins rendering. */
+  primitiveDescriptors?: NodeTypeDescriptor[];
 
   /**
    * Rendering pipeline for node bodies: `"webgl"` (default, GPU) or `"dom"`
@@ -215,12 +238,20 @@ export interface NodeEditorProps {
    */
   skinWrapper?: NodeSkinWrapper;
 
+  /**
+   * Synchronous DOM templates used only to measure intrinsic primitive size.
+   * These are separate from React skins because React commits asynchronously.
+   */
+  measurementTemplates?: Partial<
+    Record<BuiltinNodeType | string, PrimitiveMeasurementTemplate>
+  >;
+
   // ── Controlled graph (external source of truth) ────────
   /**
-   * External node list. When provided, the wrapper treats it as the source of
-   * truth for graph structure: on change it rebuilds the editor's graph via
-   * `importGraph` (structure, positions, labels). Editor-originated drags are
-   * reported back through `onNodePositionChange` instead of being re-imported.
+   * Compatibility input for consumers that still own graph state. When
+   * provided, the adapter projects these lists into core through its public
+   * controlled-graph command. New integrations should prefer core-owned graph
+   * state and event/command synchronization.
    *
    * Note: each controlled sync clears the editor's undo history (imports are a
    * fresh baseline).
@@ -230,8 +261,8 @@ export interface NodeEditorProps {
   edges?: ControlledEdge[];
   /**
    * Fired after the user drags nodes in the editor, with their new world
-   * positions — the consumer should fold these into its state. Position-only
-   * echo of these changes back into `nodes` is suppressed by the wrapper.
+   * positions. The consumer can fold these into its external state; the
+   * compatibility adapter suppresses the immediate position-only echo.
    */
   onNodePositionChange?: (
     changes: NodePositionChange[]
@@ -297,6 +328,10 @@ export interface NodeEditorHandle {
 
   // ── Editor operations ──────────────────────────────────
   setConnectionMode(mode: ConnectionMode): void;
+  /** Configure runtime zoom bounds, including tool-specific zoom locking. */
+  setZoomRange(minZoom: number, maxZoom: number): void;
+  /** Read the active runtime zoom bounds. */
+  getZoomRange(): { minZoom: number; maxZoom: number };
 
   // ── Camera / coordinate operations ─────────────────────
   /** Convert a screen-space pixel coordinate to world coordinates. */
@@ -309,8 +344,8 @@ export interface NodeEditorHandle {
   /** The current camera viewport state. */
   getViewport(): Viewport;
   /**
-   * Immediately set the camera viewport. Zoom is clamped by the core camera
-   * (0.1–5).
+   * Immediately set the camera viewport. Zoom is clamped by the configured
+   * runtime zoom range.
    */
   setViewport(x: number, y: number, zoom: number): void;
   /**
