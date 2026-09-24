@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { GraphEvents, NodeEditor } from "@graph-giraffe/core";
+import type { NodeEditor } from "@graph-giraffe/core";
 import type { ControlledEdge, ControlledNode, NodePositionChange } from "../types";
 import { syncControlledGraph } from "./controlled-graph";
 
@@ -34,12 +34,27 @@ export function useControlledGraph(
       draggingRef.current = true;
     };
 
-    const onDragStop = (payload: GraphEvents["node:dragStop"]): void => {
+    const onDragStop = (): void => {
       draggingRef.current = false;
       const positionChanges: NodePositionChange[] = [];
-      for (const id of payload.nodeIds) {
-        const position = editor.getNodeWorldPosition(id);
-        if (position) positionChanges.push({ id, position });
+      const currentNodes = propsRef.current.nodes;
+      if (currentNodes) {
+        const previousById = new Map(currentNodes.map((node) => [node.id, node]));
+        // A container drag translates its descendants in core even though the
+        // drag-stop payload contains only the dragged root. Compare every live
+        // world position with controlled state so the adapter commits the
+        // translated subtree instead of restoring stale child coordinates.
+        for (const node of editor.getNodes()) {
+          const previous = previousById.get(node.id);
+          const position = editor.getNodeWorldPosition(node.id);
+          if (!previous || !position) continue;
+          if (
+            previous.position.x !== position.x ||
+            previous.position.y !== position.y
+          ) {
+            positionChanges.push({ id: node.id, position });
+          }
+        }
       }
       if (positionChanges.length) propsRef.current.onNodePositionChange?.(positionChanges);
 

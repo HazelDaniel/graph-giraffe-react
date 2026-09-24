@@ -120,7 +120,10 @@ function createReactMeasurementBridge(
       roots.delete(ctx.element);
       if (!state) return;
       state.disposed = true;
-      state.root.unmount();
+      // Core can replace a measurement template while React is committing a
+      // controlled update. Unmounting this nested root synchronously from that
+      // callback re-enters React's renderer and can race the parent commit.
+      queueMicrotask(() => state.root.unmount());
     },
   };
 }
