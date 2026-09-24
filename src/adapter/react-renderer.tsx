@@ -160,7 +160,17 @@ export function registerReactPrimitives(
 ): void {
   if (props.renderMode !== "dom") return;
 
+  const suppliedDescriptors = new Map<string, NodeTypeDescriptor>();
+  for (const descriptor of registry.getAll()) {
+    suppliedDescriptors.set(descriptor.type, descriptor);
+  }
+
   registerDomNodeDescriptors(registry);
+  for (const descriptor of suppliedDescriptors.values()) {
+    const base = registry.get(descriptor.type);
+    registry.replace(base ? { ...base, ...descriptor } : descriptor);
+  }
+
   const descriptors = [...registry.getAll()];
   for (const descriptor of descriptors) {
     const skin = resolveSkin(descriptor.type, props);
