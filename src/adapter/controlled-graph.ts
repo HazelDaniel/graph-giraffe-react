@@ -28,6 +28,46 @@ function toCoreEdge(edge: ControlledEdge) {
   };
 }
 
+function graphMatchesEditor(
+  editor: NodeEditor,
+  nodes: ControlledNode[],
+  edges: ControlledEdge[]
+): boolean {
+  const currentNodes = new Map(editor.getNodes().map((node) => [node.id, node]));
+  if (currentNodes.size !== nodes.length) return false;
+
+  for (const node of nodes) {
+    const current = currentNodes.get(node.id);
+    const position = editor.getNodeWorldPosition(node.id);
+    if (!current || !position) return false;
+    if (current.nodeType !== node.type || current.parentId !== (node.parentId ?? null)) {
+      return false;
+    }
+    if (position.x !== node.position.x || position.y !== node.position.y) return false;
+    if (current.width !== node.width || current.height !== node.height) return false;
+    if (current.text !== (node.label ?? node.type)) return false;
+    if (current.isLocked !== Boolean(node.locked)) return false;
+    if (JSON.stringify(current.props) !== JSON.stringify(node.props)) return false;
+  }
+
+  const currentEdges = new Map(editor.getEdges().map((edge) => [edge.id, edge]));
+  if (currentEdges.size !== edges.length) return false;
+  for (const edge of edges) {
+    const current = currentEdges.get(edge.id);
+    if (!current) return false;
+    if (
+      current.sourceNodeId !== edge.source ||
+      current.targetNodeId !== edge.target ||
+      current.sourceHandleSide !== (edge.sourceHandle ?? "right") ||
+      current.targetHandleSide !== (edge.targetHandle ?? "left")
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function syncControlledGraph(
   editor: NodeEditor,
   nodes: ControlledNode[],
@@ -36,6 +76,10 @@ export function syncControlledGraph(
 ): boolean {
   const next = JSON.stringify([nodes, edges]);
   if (fingerprint.current === next) return false;
+  if (graphMatchesEditor(editor, nodes, edges)) {
+    fingerprint.current = next;
+    return false;
+  }
   editor.applyControlledGraph(nodes.map(toCoreNode), edges.map(toCoreEdge));
   fingerprint.current = next;
   return true;
