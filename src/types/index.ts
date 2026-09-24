@@ -286,6 +286,7 @@ export interface NodeEditorProps {
   onSelectionChange?: SyncHandler<GraphEvents['selection:change']>;
   onSubgraphCollapseToggle?: SyncHandler<GraphEvents['subgraph:collapseToggle']>;
   onHubCreated?: SyncHandler<GraphEvents['hub:created']>;
+  onGeometryChange?: SyncHandler<GraphEvents['geometry:change']>;
 
   // ── Async before-event hooks ───────────────────────────
   onBeforeConnect?: AsyncHandler<GraphBeforeEvents['before:connect']>;

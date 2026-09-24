@@ -50,6 +50,7 @@ const SYNC_EVENT_MAP: Array<[keyof NodeEditorProps, keyof GraphEvents]> = [
   ["onSelectionChange", "selection:change"],
   ["onSubgraphCollapseToggle", "subgraph:collapseToggle"],
   ["onHubCreated", "hub:created"],
+  ["onGeometryChange", "geometry:change"],
 ];
 
 const BEFORE_EVENT_MAP: Array<
