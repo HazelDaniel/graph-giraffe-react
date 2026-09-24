@@ -16,6 +16,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "demo:proctor": "vite --config demos/proctor-replica/vite.config.ts",
+    "demo:proctor:build": "vite build --config demos/proctor-replica/vite.config.ts",
+    "demo:proctor:typecheck": "tsc --noEmit -p demos/proctor-replica/tsconfig.json",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "preview": "vite preview"
