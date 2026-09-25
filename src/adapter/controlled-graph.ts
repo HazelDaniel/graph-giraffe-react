@@ -33,11 +33,10 @@ function graphMatchesEditor(
   nodes: ControlledNode[],
   edges: ControlledEdge[]
 ): boolean {
-  const currentNodes = new Map(editor.getNodes().map((node) => [node.id, node]));
-  if (currentNodes.size !== nodes.length) return false;
+  if (editor.getNodeCount() !== nodes.length) return false;
 
   for (const node of nodes) {
-    const current = currentNodes.get(node.id);
+    const current = editor.getNode(node.id);
     const position = editor.getNodeWorldPosition(node.id);
     if (!current || !position) return false;
     if (current.nodeType !== node.type || current.parentId !== (node.parentId ?? null)) {
@@ -50,10 +49,9 @@ function graphMatchesEditor(
     if (JSON.stringify(current.props) !== JSON.stringify(node.props)) return false;
   }
 
-  const currentEdges = new Map(editor.getEdges().map((edge) => [edge.id, edge]));
-  if (currentEdges.size !== edges.length) return false;
+  if (editor.getEdgeCount() !== edges.length) return false;
   for (const edge of edges) {
-    const current = currentEdges.get(edge.id);
+    const current = editor.getEdge(edge.id);
     if (!current) return false;
     if (
       current.sourceNodeId !== edge.source ||
