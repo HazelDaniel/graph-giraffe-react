@@ -257,8 +257,8 @@ export interface NodeEditorProps {
    * controlled-graph command. New integrations should prefer core-owned graph
    * state and event/command synchronization.
    *
-   * Note: each controlled sync clears the editor's undo history (imports are a
-   * fresh baseline).
+   * Incremental controlled syncs preserve the editor's undo history. Initial
+   * hydration and explicit graph imports establish a fresh baseline.
    */
   nodes?: ControlledNode[];
   /** External edge list (same semantics as `nodes`). */
@@ -279,6 +279,7 @@ export interface NodeEditorProps {
   onNodeDrag?: SyncHandler<GraphEvents['node:drag']>;
   onNodeDragStop?: SyncHandler<GraphEvents['node:dragStop']>;
   onEdgeClick?: SyncHandler<GraphEvents['edge:click']>;
+  onEdgeRemove?: SyncHandler<GraphEvents['edge:remove']>;
   onPaneClick?: SyncHandler<GraphEvents['pane:click']>;
   onNodeLabelChange?: SyncHandler<GraphEvents['node:labelChange']>;
   onNodePropChange?: SyncHandler<GraphEvents['node:propChange']>;

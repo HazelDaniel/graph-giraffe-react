@@ -11,6 +11,7 @@ import type { NodeData, EdgeData, GraphEvents } from '@graph-giraffe/core';
 const GRAPH_MUTATION_EVENTS: Array<keyof GraphEvents> = [
   'history:command',
   'connect',
+  'edge:remove',
   'node:drag',
   'node:dragStop',
   'node:reparent',

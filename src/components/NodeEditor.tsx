@@ -43,6 +43,7 @@ const SYNC_EVENT_MAP: Array<[keyof NodeEditorProps, keyof GraphEvents]> = [
   ["onNodeDrag", "node:drag"],
   ["onNodeDragStop", "node:dragStop"],
   ["onEdgeClick", "edge:click"],
+  ["onEdgeRemove", "edge:remove"],
   ["onPaneClick", "pane:click"],
   ["onNodeLabelChange", "node:labelChange"],
   ["onNodePropChange", "node:propChange"],
